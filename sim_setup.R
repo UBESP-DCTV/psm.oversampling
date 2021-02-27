@@ -80,7 +80,7 @@ scenarios <- furrr::future_map2_dfr(
 toc()
 
 # 2) Sample from the superpopulation -----------------------------------
-n_samples <- 1000L
+n_samples <- 10000L
 sample_size <- c(100L, 250L, 500L, 1000L)
 
 scen_data <- tidyr::expand_grid(

@@ -14,7 +14,6 @@ library(tidyverse)
 library(Matching)
 library(cobalt)
 library(depigner)
-library(see)
 library(ggpubr)
 
 # Load results
@@ -71,7 +70,7 @@ p_asmd <- ggplot(
   scale_shape_discrete(name = "Treatment assignment") +
   ylab("ASMD") +
   xlab("Oversampling") +
-  theme_modern()
+  theme_light()
 
 p_asmd
 ```
@@ -91,7 +90,7 @@ ggplot(
   scale_shape_discrete(name = "Treatment assignment") +
   ylab("SMD of PS") +
   xlab("Oversampling") +
-  theme_modern()
+  theme_light()
 ```
 
 ## Overlapping coefficient
@@ -109,7 +108,7 @@ ggplot(
   scale_shape_discrete(name = "Treatment assignment") +
   ylab("Overlapping coefficient of PS") +
   xlab("Oversampling") +
-  theme_modern()
+  theme_light()
 ```
 
 ## Proportion of matched treated
@@ -127,7 +126,7 @@ p_mtch_tr <- ggplot(
   scale_shape_discrete(name = "Treatment assignment") +
   ylab("Proportion of matched treated") +
   xlab("Oversampling") +
-  theme_modern()
+  theme_light()
 
 p_mtch_tr
 ```
@@ -147,7 +146,7 @@ p_bias <- ggplot(
   scale_shape_discrete(name = "Treatment assignment") +
   ylab("Relative bias (%)") +
   xlab("Oversampling") +
-  theme_modern()
+  theme_light()
 
 p_bias
 ```
@@ -167,7 +166,7 @@ p_rmse <- ggplot(
   scale_shape_discrete(name = "Treatment assignment") +
   ylab("Root Mean Squared Error") +
   xlab("Oversampling") +
-  theme_modern()
+  theme_light()
 
 p_rmse
 ```
@@ -188,7 +187,7 @@ p_nc <- ggplot(
   scale_y_continuous(breaks = seq(from = 45, to = 100, by = 10)) +
   ylab("Nominal Coverage (%) (Standard)") +
   xlab("Oversampling") +
-  theme_modern()
+  theme_light()
 
 p_nc
 ```
