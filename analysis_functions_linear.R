@@ -40,7 +40,7 @@ matching_fun <- function(
   # Define the inputs for Matching
   y <- ps_data[[outcome]]
   tr <- ps_data[[treatment]]
-  ps <- ps_data$ps_logit
+  ps <- ps_data[["ps_logit"]]
 
   # # Define the caliper
   # caliper <- 0.2 * sd(ps)
@@ -57,88 +57,6 @@ matching_fun <- function(
     ties = TRUE,
     Var.calc = 1
   )
-
-}
-
-# Evaluate balance -----------------------------------------------------
-balance_diagnostics <- function(
-  matching_obj, ps_data, treatment, covariates
-) {
-
-  assertive::assert_is_data.frame(ps_data)
-  if(class(matching_obj) != "Match") {
-    usethis::ui_stop(
-      "'matching_obj' must be of class 'Match'"
-    )
-  }
-  assertive::assert_is_character(treatment)
-  assertive::assert_is_character(covariates)
-
-  # Treatment formula
-  treat_formula <- paste(
-    treatment,
-    paste0(c(covariates, "ps_logit"), collapse = " + "),
-    sep = " ~ "
-  ) %>%
-    as.formula()
-
-  # Create an if else condition to discard Matching that were not
-  # performed given the absence of valid control matches
-
-  if (!is.na(matching_obj)[1]) {
-
-  # One-dimensional measures
-  bal_tab <- cobalt::bal.tab(
-    x = matching_obj,
-    formula = treat_formula,
-    data = ps_data,
-    continuous = "std", binary = "std",
-    s.d.denom = "pooled", abs = TRUE, quick = FALSE
-  )
-
-  smds <- bal_tab$Balance %>%
-    tibble::as_tibble(rownames = "covs") %>%
-    dplyr::slice(-nrow(.)) %>%
-    dplyr::select(covs, Diff.Adj)
-
-  # Overall balance measure
-  asmds <- mean(smds$Diff.Adj, na.rm = TRUE)
-  ps_smd <- bal_tab$Balance %>%
-    tibble::as_tibble(rownames = "covs") %>%
-    dplyr::filter(covs == "ps_logit") %>%
-    .[["Diff.Adj"]]
-  ps_ovc <- bal_tab$Balance %>%
-    tibble::as_tibble(rownames = "covs") %>%
-    dplyr::filter(covs == "ps_logit") %>%
-    .[["OVL.Adj"]]
-  prop_matched_treated <- bal_tab$Observations[2, 2]/
-    bal_tab$Observations[1, 2]
-
-  # Final tibble with all the measures
-  res <- tibble::tibble(
-    single_smds = list(smds),
-    average_smd = asmds,
-    ps_smd = ps_smd,
-    ps_ovc = ps_ovc,
-    p_matched_treated = prop_matched_treated
-  )
-
-  } else {
-
-    res <- tibble::tibble(
-      single_smds = list(tibble::tibble(
-        covs = covariates,
-        Diff.Adj = rep(NA_real_, length(covariates))
-      )),
-      average_smd = NA_real_,
-      ps_smd = NA_real_,
-      ps_ovc = NA_real_,
-      p_matched_treated = NA_real_
-    )
-
-  }
-
-  res
 
 }
 
@@ -190,7 +108,7 @@ est_treat_effect <- function(matching_obj) {
 }
 
 # Run a single analysis ------------------------------------------------
-single_analysis <- function(
+single_analysis_linear <- function(
   data, covariates, treatment, outcome, ratio, replacement
 ) {
 
@@ -211,52 +129,16 @@ single_analysis <- function(
     ratio = ratio, replacement = replacement
   )
 
-  # Step 3: balance evaluation
-  balance <- balance_diagnostics(
-    matching_obj = mtch, ps_data = ps_est, treatment = treatment,
-    covariates = covariates
-  )
-
-  # Step 4: estimate treatment effect
+  # Step 3: estimate treatment effect
   tr_eff <- est_treat_effect(matching_obj = mtch)
 
   # Store results into a tibble
-  tibble::tibble(balance, tr_eff)
+  tibble::tibble(tr_eff)
 
 }
 
 # Run the analysis on all the datasets ---------------------------------
-mc_analysis <- function(
-  mc_samples, covariates, treatment, outcome, ratio, replacement
-) {
-
-  assertive::assert_is_list(mc_samples)
-  assertive::assert_is_character(covariates)
-  assertive::assert_is_character(treatment)
-  assertive::assert_is_character(outcome)
-  assertive::assert_is_a_number(ratio)
-  assertive::assert_is_logical(replacement)
-
-  purrr::map_dfr(
-    .x = mc_samples,
-    ~ {
-
-      single_analysis(
-        data = .x,
-        covariates = covariates,
-        treatment = treatment,
-        outcome = outcome,
-        ratio = ratio,
-        replacement = replacement
-      )
-
-    }
-  )
-
-}
-
-# Computes performances metrics ----------------------------------------
-mc_metrics <- function(mc_results, att_true) {
+mc_metrics_linear <- function(mc_results, att_true) {
 
   assertive::assert_is_data.frame(mc_results)
   assertive::assert_is_a_number(att_true)
@@ -280,36 +162,18 @@ mc_metrics <- function(mc_results, att_true) {
   nc_ai <- sum(incl_att_ai, na.rm = TRUE)/length(incl_att_ai)
   nc_std <- sum(incl_att_std, na.rm = TRUE)/length(incl_att_std)
 
-  # Balance metrics ----------------------------------------------------
-  # Average single smds
-  single_smds <- purrr::map_dfr(
-    .x = mc_results$single_smds,
-    ~ .x
-  ) %>%
-    dplyr::group_by(covs) %>%
-    dplyr::summarise(asmd = mean(Diff.Adj, na.rm = TRUE)) %>%
-    dplyr::ungroup()
-
-  # Average ASMD, PS-SMD, OVC, AUC and Proportion of matched treated
-  asmd <- mean(mc_results$average_smd, na.rm = TRUE)
-  ps_smd <- mean(mc_results$ps_smd, na.rm = TRUE)
-  ps_ovc <- mean(mc_results$ps_ovc, na.rm = TRUE)
-  p_mt <- mean(mc_results$p_matched_treated, na.rm = TRUE)
-
   # Store results into a tibble
   tibble::tibble(
     rel_bias = rel_bias,
     rmse = rmse,
-    nc_ai = nc_ai, nc_std = nc_std,
-    single_smds = list(single_smds),
-    asmd = asmd, ps_smd = ps_smd, ps_ovc = ps_ovc, p_mt = p_mt
+    nc_ai = nc_ai, nc_std = nc_std
   )
 
 
 }
 
 # Single analysis for a scenario ---------------------------------------
-scenario_analysis <- function(
+scenario_analysis_linear <- function(
   mc_samples, att_true, covariates, treatment, outcome, ratio,
   replacement
 ) {
@@ -323,7 +187,7 @@ scenario_analysis <- function(
   assertive::assert_is_logical(replacement)
 
   # Get MC results
-  mc_results <- mc_analysis(
+  mc_results <- mc_analysis_linear(
     mc_samples = mc_samples,
     covariates = covariates,
     treatment = treatment,
@@ -333,7 +197,7 @@ scenario_analysis <- function(
   )
 
   # Get MC performances metrics
-  mc_metrics(
+  mc_metrics_linear(
     mc_results = mc_results, att_true = att_true
   ) %>%
     tibble::add_column(ratio = ratio, .before = 1L) %>%
@@ -341,7 +205,7 @@ scenario_analysis <- function(
 }
 
 # Multiple analysis for scenario ---------------------------------------
-multi_scenario_analysis <- function(
+multi_scenario_analysis_linear <- function(
   mc_samples, att_true, covariates, treatment, outcome, rep_over_grid
 ) {
 
@@ -354,7 +218,7 @@ multi_scenario_analysis <- function(
 
   purrr::map2_dfr(
     .x = rep_over_grid[["replacement"]], .y = rep_over_grid[["ratio"]],
-    ~ scenario_analysis(
+    ~ scenario_analysis_linear(
       mc_samples = mc_samples,
       att_true = att_true,
       covariates = covariates,
@@ -367,4 +231,3 @@ multi_scenario_analysis <- function(
 
 
 }
-

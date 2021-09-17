@@ -1,0 +1,154 @@
+---
+title: "PSM Oversampling - Simulation results linear prob model"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Load packages
+library(tidyverse)
+library(Matching)
+library(cobalt)
+library(depigner)
+library(ggpubr)
+
+# Load results
+load(here::here("simulation_results_pop_1000000_n_10000_linear.rda.rda"))
+```
+
+```{r}
+# Prepare the dataframe for results ------------------------------------
+df_grid <- sim_res %>% 
+  dplyr::select(treat_assign, p_treat, ss) %>% 
+  expand_grid(
+    sim_res$results[[1]] %>% 
+      dplyr::select(ratio, replace)
+  ) %>% 
+  bind_cols(
+    map_dfr(
+      .x = sim_res$results, 
+      ~ .x %>% 
+        dplyr::select(-replace, -ratio)
+    )
+  ) %>% 
+  mutate(
+    treat_assign = factor(treat_assign, levels = c("weak", "strong")),
+    p_treat = factor(
+      paste("Prop treated", p_treat, sep = ": "), 
+      levels = c(
+        "Prop treated: 0.3", "Prop treated: 0.5", "Prop treated: 0.7"
+      )
+    ),
+    ss = factor(
+      paste("N", ss, sep = " = "), 
+      levels = c("N = 100", "N = 250", "N = 500", "N = 1000")
+    ),
+    replace = factor(
+      if_else(replace, "Yes", "No"),
+      levels = c("No", "Yes")
+    )
+  )
+```
+
+# Relative bias
+```{r, fig.height = 8, fig.width = 12}
+p_bias <- ggplot(
+  data = df_grid,
+  mapping = aes(
+    x = ratio, y = rel_bias, colour = replace, shape = treat_assign
+  )
+) +
+  geom_point() +
+  geom_line() +
+  facet_grid(ss ~ p_treat) +
+  scale_colour_discrete(name = "Replacement") +
+  scale_shape_discrete(name = "Treatment assignment") +
+  ylab("Relative bias (%)") +
+  xlab("Oversampling") +
+  theme_light()
+
+p_bias
+```
+
+# Root Mean Squared Error
+```{r, fig.height = 8, fig.width = 12}
+p_rmse <- ggplot(
+  data = df_grid,
+  mapping = aes(
+    x = ratio, y = rmse, colour = replace, shape = treat_assign
+  )
+) +
+  geom_point() +
+  geom_line() +
+  facet_grid(ss ~ p_treat) +
+  scale_colour_discrete(name = "Replacement") +
+  scale_shape_discrete(name = "Treatment assignment") +
+  ylab("Root Mean Squared Error") +
+  xlab("Oversampling") +
+  theme_light()
+
+p_rmse
+```
+
+# 95% CI Nominal Coverage
+```{r, fig.height = 8, fig.width = 12}
+p_nc <- ggplot(
+  data = df_grid,
+  mapping = aes(
+    x = ratio, y = nc_std * 100, colour = replace, shape = treat_assign
+  )
+) +
+  geom_point() +
+  geom_line() +
+  facet_grid(ss ~ p_treat) +
+  scale_colour_discrete(name = "Replacement") +
+  scale_shape_discrete(name = "Treatment assignment") +
+  scale_y_continuous(breaks = seq(from = 45, to = 100, by = 10)) +
+  ylab("Nominal Coverage (%) (Standard)") +
+  xlab("Oversampling") +
+  theme_light()
+
+p_nc
+```
+
+# 95% CI Nominal Coverage (Abadie-Imbens)
+```{r, fig.height = 8, fig.width = 12}
+p_nc_ai <- ggplot(
+  data = df_grid,
+  mapping = aes(
+    x = ratio, y = nc_ai * 100, colour = replace, shape = treat_assign
+  )
+) +
+  geom_point() +
+  geom_line() +
+  facet_grid(ss ~ p_treat) +
+  scale_colour_discrete(name = "Replacement") +
+  scale_shape_discrete(name = "Treatment assignment") +
+  scale_y_continuous(breaks = seq(from = 45, to = 100, by = 10)) +
+  coord_cartesian(ylim = c(45, 100)) +
+  ylab("Nominal Coverage (%) (Abadie-Imbens)") +
+  xlab("Oversampling") +
+  theme_modern()
+
+p_nc_ai
+```
+
+# ASMDs and Proportion of Matched Treated
+
+```{r, fig.width = 14, fig.height = 8}
+ggarrange(p_asmd, p_mtch_tr, common.legend = TRUE)
+```
+
+# Bias, RMSE and NC
+
+```{r, fig.width = 10, fig.height = 12}
+ggarrange(
+  p_bias, p_rmse, p_nc, p_nc_ai,
+  ncol = 2L, nrow = 2L, common.legend = TRUE
+)
+```
+
