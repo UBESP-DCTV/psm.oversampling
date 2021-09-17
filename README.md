@@ -53,10 +53,10 @@ The project contains the following files:
 The results of the main simulations can be replicated as follows:
 
 1. Run the script _sim_setup.R_, which saves the simulated scenarios
-   in a file named __simulation_data_pop_10000000_n_1000.rda__.
+   in a file named __simulation_data_pop_10000000_n_10000.rda__.
    
 2. Run the script _analysis_mc_sim.R_, which stores the results of
-   the simulations in a file named __simulation_results_pop_1000000_n_1000.rda__.
+   the simulations in a file named __simulation_results_pop_1000000_n_10000.rda__.
 
 3. Knitr the _sim_results.Rmd_ file to visualize the results of the
    simulations.
@@ -64,10 +64,10 @@ The results of the main simulations can be replicated as follows:
 The results of the secondary simulations can be replicated as follows:
 
 1. Run the script _sim_setup_linear.R_, which saves the simulated scenarios
-   in a file named __simulation_data_pop_10000000_n_1000_linear.rda__.
+   in a file named __simulation_data_pop_10000000_n_10000_linear.rda__.
    
 2. Run the script _analysis_mc_sim_linear.R_, which stores the results of
-   the simulations in a file named __simulation_results_pop_1000000_n_1000_linear.rda__.
+   the simulations in a file named __simulation_results_pop_1000000_n_10000_linear.rda__.
 
 3. Knitr the _sim_results_linear.Rmd_ file to visualize the results of the
    simulations.
