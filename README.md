@@ -2,7 +2,7 @@
 This repository contains the R scripts to reproduce the results of the
 Monte Carlo simulations of the study "__Oversampling and Replacement 
 Strategies in Propensity Score Matching: A Critical Review Focused on 
-Small Sample Size in Clinical Settings__".
+Small Sample Size in Clinical Settings__" ([https://doi.org/10.1186/s12874-021-01454-z](https://doi.org/10.1186/s12874-021-01454-z)).
 
 Before running the scripts, please install the following R packages:
 
